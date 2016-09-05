@@ -22,3 +22,7 @@ $ kcs login dropbox
 In first time of use, a lot of dialog will open.
 You need to click `Always Allow` for all.
 
+# license
+
+MIT
+
