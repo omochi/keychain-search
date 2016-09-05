@@ -16,12 +16,12 @@ class App
             return false
         end
 
-        keychain_key = ARGV[0]
+        keychain_key = ARGV[0].downcase
         search_regex = Regexp.new(ARGV[1], Regexp::IGNORECASE | Regexp::MULTILINE)
 
         keychains = GetKeychains.new.run
         selected_keychain = keychains.select {|x|
-            x.include? keychain_key
+            x.downcase.include? keychain_key
         }[0]
 
         if ! selected_keychain
