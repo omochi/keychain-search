@@ -7,7 +7,7 @@ Gem::Specification.new do |s|
     s.authors = ["omochimetaru"]
     s.email = "omochi.metaru@gmail.com"
     s.files = Dir["lib/*.rb"] + Dir["bin/*"]
-    s.homepage = ""
+    s.homepage = "https://github.com/omochi/keychain-search"
     s.bindir = "bin"
     s.executables = ["kcs"]
 end
