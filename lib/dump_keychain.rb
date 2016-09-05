@@ -12,20 +12,25 @@ class DumpKeychain
         ].shelljoin
         output = exec_capture(cmd)
         lines = output.split("\n")
-        entries = split_entries(lines)
+
 
         class_regex = /^class: (.*)$/
         svce_regex = /^    "svce"<blob>=(.*)/
         x0x7_regex = /^    0x00000007 <blob>=(.*)/ 
 
-        entries = entries.map {|entry|
+        entries = split_entries(lines).map{|keychain, lines|
             is_data_line = false
-            for line in entry[:lines]
+
+            data_str = nil
+            class_name = nil
+            original_title = nil
+            updated_title = nil
+            note = nil
+
+            for line in lines
                 if is_data_line
                     is_data_line = false
-                    plist_str = read_keychain_value(line)
-                    plist = REXML::Document.new(plist_str)
-                    entry[:note] = read_note_from_plist(plist)
+                    data_str = read_keychain_value(line)
                     next
                 end
 
@@ -35,84 +40,68 @@ class DumpKeychain
                 end
                 m = line.match(class_regex)
                 if m
-                    entry[:class] = read_keychain_value(m[1])
+                    class_name = read_keychain_value(m[1])
                     next
                 end
                 m = line.match(svce_regex)
                 if m
-                    entry[:original_title] = read_keychain_value(m[1])
+                    original_title = read_keychain_value(m[1])
                     next
                 end
                 m = line.match(x0x7_regex)
                 if m 
-                    entry[:updated_title] = read_keychain_value(m[1])
+                    updated_title = read_keychain_value(m[1])
                     next
                 end
             end
 
-            entry[:title] = entry[:updated_title] || entry[:original_title]
+            if class_name == "genp"
+                note = read_note_from_plist(REXML::Document.new(data_str))
+            end
             
-            entry
+            DumpEntry.new(
+                keychain,
+                class_name,
+                original_title,
+                updated_title,
+                note
+            )
         }
 
         entries = entries.select {|e|
-            if e[:title] && e[:title].match(regex)
-                next true
+            if e.class_name != "genp"
+                next false
             end
-            if e[:note] && e[:note].match(regex)
-                next true
-            end
-            false
-        }
+            e.match(regex)
+        }.sort
 
-        entries = entries.sort {|a, b|
-            compare_nillables(a[:keychain], b[:keychain]) {|ak, bk|
-                if ak != bk
-                    next ak <=> bk
-                end
-                compare_nillables(a[:title], b[:title]) {|at, bt|
-                    at <=> bt
-                }
-            }
-        }
-
-        for x in entries
-            puts "===="
-            puts "keychain: #{x[:keychain]}"
-            puts "title: #{x[:title]}"
-            puts "--"
-            puts x[:note]
-        end
-
-        return lines
+        return entries
     end
 
     def split_entries(lines)
-        i = 0
-        entries = []
-        entry = nil
-        while i < lines.length
-            line = lines[i]
-            i += 1
-            m = line.match(keychain_regex)
-            if m
-                if entry
-                    entries << entry
+        return Enumerator.new {|y|
+            i = 0
+            entry = nil
+            while i < lines.length
+                line = lines[i]
+                i += 1
+                m = line.match(keychain_regex)
+                if m
+                    if entry
+                        y << [entry[:keychain], entry[:lines]]
+                    end
+                    entry = {
+                        keychain: m[1],
+                        lines: []
+                    }
                 end
-                entry = {
-                    keychain: m[1],
-                    lines: []
-                }
+                if ! entry
+                    next
+                end
+                entry[:lines] << line
             end
-            if ! entry
-                next
-            end
-            entry[:lines] << line
-        end
-        if entry
-            entries << entry
-        end
-        return entries
+            y << [entry[:keychain], entry[:lines]]
+        }
     end
 
     def read_note_from_plist(plist)

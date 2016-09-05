@@ -4,6 +4,7 @@ require "shellwords"
 require "rexml/document"
 require_relative "get_keychains"
 require_relative "dump_keychain"
+require_relative "dump_entry"
 require_relative "util"
 
 class App
@@ -33,7 +34,15 @@ class App
             return false
         end
 
-        DumpKeychain.new.run(selected_keychain, search_regex)
+        entries = DumpKeychain.new.run(selected_keychain, search_regex)
+        
+        for x in entries
+            puts "===="
+            puts "keychain: #{x.keychain}"
+            puts "title: #{x.title}"
+            puts "--"
+            puts x.note
+        end
 
         return true
     end
