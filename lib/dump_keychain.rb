@@ -13,16 +13,17 @@ class DumpKeychain
         output = exec_capture(cmd)
         lines = output.split("\n")
 
-
         class_regex = /^class: (.*)$/
         svce_regex = /^    "svce"<blob>=(.*)/
         x0x7_regex = /^    0x00000007 <blob>=(.*)/ 
+        type_regex = /^    "type"<uint32>=(.*)/
 
         entries = split_entries(lines).map{|keychain, lines|
             is_data_line = false
 
             data_str = nil
             class_name = nil
+            type = nil
             original_title = nil
             updated_title = nil
             note = nil
@@ -53,15 +54,21 @@ class DumpKeychain
                     updated_title = read_keychain_value(m[1])
                     next
                 end
+                m = line.match(type_regex)
+                if m
+                    type = read_keychain_value(m[1])
+                    next
+                end
             end
 
-            if class_name == "genp"
+            if type == "note"
                 note = read_note_from_plist(REXML::Document.new(data_str))
             end
             
             DumpEntry.new(
                 keychain,
                 class_name,
+                type,
                 original_title,
                 updated_title,
                 note
@@ -69,7 +76,7 @@ class DumpKeychain
         }
 
         entries = entries.select {|e|
-            if e.class_name != "genp"
+            if e.type != "note"
                 next false
             end
             e.match(regex)

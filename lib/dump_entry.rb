@@ -4,12 +4,14 @@ class DumpEntry
     def initialize(
         keychain,
         class_name,
+        type,
         original_title,
         updated_title,
         note
     )
         @keychain = keychain
         @class_name = class_name
+        @type = type
         @original_title = original_title
         @updated_title = updated_title
         @note = note
@@ -17,6 +19,7 @@ class DumpEntry
 
     attr_reader :keychain
     attr_reader :class_name
+    attr_reader :type
     
     def title
         return updated_title || original_title
